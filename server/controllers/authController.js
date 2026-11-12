@@ -1,57 +1,131 @@
-const User = require('../models/User');
-const generateToken = require('../utils/generateToken');
+const bcrypt = require("bcryptjs");
+const User = require("../models/User");
+const generateToken = require("../utils/generateToken");
 
-// @desc    Register a new user
-// @route   POST /api/auth/register
-// @access  Public
-const registerUser = async (req, res) => {
+// POST /api/auth/register
+async function registerUser(req, res) {
   try {
-    const { name, email, password } = req.body;
+    const name = typeof req.body.name === "string" ? req.body.name.trim() : "";
+    const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    const password = typeof req.body.password === "string" ? req.body.password : "";
 
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        message: "Name, email and password are required",
+      });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({
+        message: "Password must be at least 6 characters",
+      });
+    }
+    if (Buffer.byteLength(password, "utf8") > 72) {
+      return res.status(400).json({
+        message: "Password is too long",
+      });
     }
 
-    const user = await User.create({ name, email, password });
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({
+        message: "An account with this email already exists",
+      });
+    }
 
-    if (user) {
-      res.status(201).json({
-        _id: user._id,
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role: "user",
+    });
+
+    const token = generateToken(user._id);
+
+    return res.status(201).json({
+      message: "Registration successful",
+      token,
+      user: {
+        id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
-        token: generateToken(user._id),
+      },
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: "An account with this email already exists",
       });
     }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Registration error:", error.message);
+    return res.status(500).json({
+      message: "Registration failed",
+    });
   }
-};
+}
 
-// @desc    Login user & get token
-// @route   POST /api/auth/login
-// @access  Public
-const loginUser = async (req, res) => {
+// POST /api/auth/login
+async function loginUser(req, res) {
   try {
-    const { email, password } = req.body;
+    const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    const password = typeof req.body.password === "string" ? req.body.password : "";
 
-    const user = await User.findOne({ email });
+    if (!email || !password) {
+      return res.status(400).json({
+        message: "Email and password are required",
+      });
+    }
 
-    if (user && (await user.matchPassword(password))) {
-      res.json({
-        _id: user._id,
+    const user = await User.findOne({ email }).select("+password");
+    if (!user) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
+    }
+
+    const passwordMatches = await bcrypt.compare(password, user.password);
+    if (!passwordMatches) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
+    }
+
+    const token = generateToken(user._id);
+
+    return res.status(200).json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
-        token: generateToken(user._id),
-      });
-    } else {
-      res.status(401).json({ message: 'Invalid email or password' });
-    }
+      },
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Login error:", error.message);
+    return res.status(500).json({
+      message: "Login failed",
+    });
   }
-};
+}
 
-module.exports = { registerUser, loginUser };
+// GET /api/auth/me
+function getCurrentUser(req, res) {
+  return res.status(200).json({
+    user: {
+      id: req.user._id,
+      name: req.user.name,
+      email: req.user.email,
+      role: req.user.role,
+    },
+  });
+}
+
+module.exports = {
+  registerUser,
+  loginUser,
+  getCurrentUser,
+};

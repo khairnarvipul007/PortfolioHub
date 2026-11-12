@@ -1,5 +1,10 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+} from "react-router-dom";
 import Navbar from "./components/Navbar";
+import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./pages/Home";
 import Events from "./pages/Events";
 import Login from "./pages/Login";
@@ -18,11 +23,19 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route
           path="/my-registrations"
-          element={<MyRegistrations />}
+          element={
+            <ProtectedRoute>
+              <MyRegistrations />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/admin"
-          element={<AdminDashboard />}
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
         />
       </Routes>
     </BrowserRouter>

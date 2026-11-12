@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
+import NotificationBell from "./NotificationBell.jsx";
 
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -29,16 +30,10 @@ function Navbar() {
 
         {/* Desktop Menu */}
         <div className="hidden items-center gap-6 md:flex">
-          <Link
-            to="/"
-            className="transition hover:text-indigo-400"
-          >
+          <Link to="/" className="transition hover:text-indigo-400">
             Home
           </Link>
-          <Link
-            to="/events"
-            className="transition hover:text-indigo-400"
-          >
+          <Link to="/events" className="transition hover:text-indigo-400">
             Events
           </Link>
 
@@ -50,6 +45,14 @@ function Navbar() {
               >
                 My Registrations
               </Link>
+              {user.role === "admin" && (
+                <Link
+                  to="/admin"
+                  className="transition hover:text-yellow-400"
+                >
+                  Admin Dashboard
+                </Link>
+              )}
               <span className="text-sm text-slate-300">
                 Hi, {user.name}
               </span>
@@ -78,31 +81,36 @@ function Navbar() {
           )}
         </div>
 
-        {/* Mobile Menu Button */}
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="rounded-lg border border-slate-600 px-3 py-2 md:hidden"
-        >
-          {menuOpen ? "✕" : "☰"}
-        </button>
+        {/* Notification Bell + Mobile Menu Button */}
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="rounded-lg border border-slate-600 px-3 py-2 md:hidden"
+          >
+            {menuOpen ? "✕" : "☰"}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Menu */}
       {menuOpen && (
         <div className="border-t border-slate-700 px-6 py-4 md:hidden">
           <div className="flex flex-col gap-4">
-            <Link to="/" onClick={closeMenu}>
-              Home
-            </Link>
-            <Link to="/events" onClick={closeMenu}>
-              Events
-            </Link>
+            <Link to="/" onClick={closeMenu}>Home</Link>
+            <Link to="/events" onClick={closeMenu}>Events</Link>
 
             {user ? (
               <>
                 <Link to="/my-registrations" onClick={closeMenu}>
                   My Registrations
                 </Link>
+                {user.role === "admin" && (
+                  <Link to="/admin" onClick={closeMenu}>
+                    Admin Dashboard
+                  </Link>
+                )}
                 <p className="text-sm text-slate-300">
                   Logged in as {user.name}
                 </p>
@@ -115,12 +123,8 @@ function Navbar() {
               </>
             ) : (
               <>
-                <Link to="/login" onClick={closeMenu}>
-                  Login
-                </Link>
-                <Link to="/register" onClick={closeMenu}>
-                  Register
-                </Link>
+                <Link to="/login" onClick={closeMenu}>Login</Link>
+                <Link to="/register" onClick={closeMenu}>Register</Link>
               </>
             )}
           </div>

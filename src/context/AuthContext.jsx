@@ -1,39 +1,79 @@
-import { createContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useEffect,
+  useState,
+} from "react";
+import {
+  loginUser,
+  registerUser,
+  getCurrentUser,
+} from "../services/api";
 
-export const AuthContext = createContext();
+export const AuthContext = createContext(null);
 
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
+  // Restore and verify the login when the app opens.
   useEffect(() => {
-    const savedUser = localStorage.getItem("portfolioHubUser");
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+    let active = true;
+
+    async function restoreSession() {
+      const token = localStorage.getItem("portfolioHubToken");
+      if (!token) {
+        setAuthLoading(false);
+        return;
+      }
+      try {
+        const data = await getCurrentUser();
+        if (active) {
+          setUser(data.user);
+        }
+      } catch {
+        localStorage.removeItem("portfolioHubToken");
+        if (active) {
+          setUser(null);
+        }
+      } finally {
+        if (active) {
+          setAuthLoading(false);
+        }
+      }
     }
+
+    restoreSession();
+    return () => {
+      active = false;
+    };
   }, []);
 
-  function login(email) {
-    const loggedInUser = {
-      name: email.split("@")[0],
-      email: email,
-    };
-    setUser(loggedInUser);
-    localStorage.setItem(
-      "portfolioHubUser",
-      JSON.stringify(loggedInUser)
-    );
+  async function login(email, password) {
+    const data = await loginUser({ email, password });
+    localStorage.setItem("portfolioHubToken", data.token);
+    setUser(data.user);
+    return data;
+  }
+
+  async function register(name, email, password) {
+    const data = await registerUser({ name, email, password });
+    localStorage.setItem("portfolioHubToken", data.token);
+    setUser(data.user);
+    return data;
   }
 
   function logout() {
+    localStorage.removeItem("portfolioHubToken");
     setUser(null);
-    localStorage.removeItem("portfolioHubUser");
   }
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        authLoading,
         login,
+        register,
         logout,
       }}
     >

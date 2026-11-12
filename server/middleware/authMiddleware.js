@@ -1,34 +1,62 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
 
-const protect = async (req, res, next) => {
-  let token;
-
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
-    try {
-      token = req.headers.authorization.split(' ')[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = await User.findById(decoded.id).select('-password');
-      next();
-    } catch (error) {
-      res.status(401).json({ message: 'Not authorized, token failed' });
+async function protect(req, res, next) {
+  try {
+    const authorization = req.headers.authorization;
+    if (!authorization || !authorization.startsWith("Bearer ")) {
+      return res.status(401).json({
+        message: "Authentication required. Please log in.",
+      });
     }
-  }
 
-  if (!token) {
-    res.status(401).json({ message: 'Not authorized, no token' });
-  }
-};
+    const token = authorization.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({
+        message: "Authentication token is missing",
+      });
+    }
 
-const admin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+      algorithms: ["HS256"],
+    });
+
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return res.status(401).json({
+        message: "User no longer exists",
+      });
+    }
+
+    req.user = user;
     next();
-  } else {
-    res.status(403).json({ message: 'Not authorized as admin' });
+  } catch (error) {
+    if (
+      error.name === "JsonWebTokenError" ||
+      error.name === "TokenExpiredError" ||
+      error.name === "NotBeforeError"
+    ) {
+      return res.status(401).json({
+        message: "Invalid or expired token. Please log in again.",
+      });
+    }
+    console.error("Authentication error:", error.message);
+    return res.status(500).json({
+      message: "Authentication could not be completed",
+    });
   }
-};
+}
 
-module.exports = { protect, admin };
+function adminOnly(req, res, next) {
+  if (!req.user || req.user.role !== "admin") {
+    return res.status(403).json({
+      message: "Access denied. Admin permission required.",
+    });
+  }
+  next();
+}
+
+module.exports = {
+  protect,
+  adminOnly,
+};
