@@ -45,6 +45,12 @@ function Navbar() {
               >
                 My Registrations
               </Link>
+              <Link
+                to="/profile"
+                className="transition hover:text-indigo-400"
+              >
+                My Profile
+              </Link>
               {user.role === "admin" && (
                 <Link
                   to="/admin"
@@ -105,6 +111,9 @@ function Navbar() {
               <>
                 <Link to="/my-registrations" onClick={closeMenu}>
                   My Registrations
+                </Link>
+                <Link to="/profile" onClick={closeMenu}>
+                  My Profile
                 </Link>
                 {user.role === "admin" && (
                   <Link to="/admin" onClick={closeMenu}>

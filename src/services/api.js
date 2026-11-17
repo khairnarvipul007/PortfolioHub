@@ -82,3 +82,8 @@ export function loginUser(credentials) {
 export function getCurrentUser() {
   return apiRequest("/auth/me");
 }
+
+// Profile API (with ownership protection)
+export function getUserProfile(id) {
+  return apiRequest(`/profiles/${id}`);
+}

@@ -12,6 +12,7 @@ const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const eventRoutes = require("./routes/eventRoutes");
 const registrationRoutes = require("./routes/registrationRoutes");
+const profileRoutes = require("./routes/profileRoutes");
 
 const {
   notFound,
@@ -50,6 +51,9 @@ app.use("/api/events", eventRoutes);
 
 // Registration endpoints
 app.use("/api/registrations", registrationRoutes);
+
+// Profile endpoints (with IDOR protection)
+app.use("/api/profiles", profileRoutes);
 
 const clientDistPath =
   [path.join(__dirname, "public"), path.join(__dirname, "..", "dist")].find(
